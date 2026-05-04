@@ -7,6 +7,7 @@ Acesse: http://localhost:3340
 
 import asyncio
 import json
+import os
 import queue
 import sys
 import tempfile
@@ -437,7 +438,8 @@ async def analyze(
             with tempfile.TemporaryDirectory(prefix="analisar_video_") as tmp:
                 tmp_dir = Path(tmp)
 
-                video_path, meta = av.download_video(url, tmp_dir, log=log)
+                instagram_session = os.environ.get("INSTAGRAM_SESSION_ID")
+                video_path, meta = av.download_video(url, tmp_dir, log=log, session_id=instagram_session)
                 transcricao = av.transcrever(video_path, modelo, lang, "cpu", log=log)
 
                 analise = None

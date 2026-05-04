@@ -65,7 +65,19 @@ def load_api_key() -> str:
 
 # ── Download ──────────────────────────────────────────────────────────────────
 
-def download_video(url: str, output_dir: Path, log: Callable | None = None) -> tuple[Path, dict]:
+def _make_cookies_file(session_id: str, output_dir: Path) -> Path:
+    cookies_path = output_dir / "cookies.txt"
+    expiry = "9999999999"
+    cookies_path.write_text(
+        "# Netscape HTTP Cookie File\n"
+        f".instagram.com\tTRUE\t/\tTRUE\t{expiry}\tsessionid\t{session_id}\n"
+        f".instagram.com\tTRUE\t/\tFALSE\t{expiry}\tig_did\t0\n",
+        encoding="utf-8",
+    )
+    return cookies_path
+
+
+def download_video(url: str, output_dir: Path, log: Callable | None = None, session_id: str | None = None) -> tuple[Path, dict]:
     import yt_dlp
 
     _log(log, "step:1:Baixando vídeo...")
@@ -96,6 +108,11 @@ def download_video(url: str, output_dir: Path, log: Callable | None = None) -> t
         "noplaylist": True,
         "progress_hooks": [_progress_hook],
     }
+
+    is_instagram = "instagram.com" in url
+    if is_instagram and session_id:
+        cookies_file = _make_cookies_file(session_id, output_dir)
+        ydl_opts["cookiefile"] = str(cookies_file)
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
