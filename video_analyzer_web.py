@@ -305,7 +305,7 @@ function mostrarResultado(data) {
     transcEl.innerHTML = data.transcricao.map(s =>
       `<div class="transcript-line"><span class="ts">[${formatTs(s.start)}]</span>${escHtml(s.text)}</div>`
     ).join('');
-    transcRaw = data.transcricao.map(s => `[${formatTs(s.start)}] ${s.text}`).join('\n');
+    transcRaw = data.transcricao.map(s => `[${formatTs(s.start)}] ${s.text}`).join('\\n');
   } else {
     transcEl.innerHTML = '<p class="text-gray-600 italic">Nenhuma fala detectada.</p>';
   }
