@@ -289,6 +289,80 @@ Estrutura geral, técnicas de retenção, pontos fortes, o que pode ser replicad
     return response.content[0].text
 
 
+# ── Prompt de edição ─────────────────────────────────────────────────────────
+
+def gerar_prompt_edicao(
+    analise: str,
+    meta: dict,
+    transcricao: list[dict],
+    api_key: str,
+    log: Callable | None = None,
+) -> str:
+    import anthropic
+
+    _log(log, "step:4:Gerando prompt de edição...")
+
+    client = anthropic.Anthropic(api_key=api_key)
+    dur = meta.get("duracao", 0)
+    trecho = " | ".join(f"{_fmt_ts(s['start'])}: {s['text']}" for s in transcricao[:30])
+
+    response = client.messages.create(
+        model=MODEL_VISUAL,
+        max_tokens=2048,
+        messages=[{
+            "role": "user",
+            "content": f"""Analise este relatório de edição de vídeo e crie um PROMPT DE EDIÇÃO estruturado para que eu possa replicar este estilo nos meus próprios vídeos.
+
+METADADOS:
+- Título: {meta.get('titulo')}
+- Plataforma: {meta.get('plataforma')}
+- Criador: {meta.get('uploader')}
+- Duração: {_fmt_ts(dur)}
+
+TRANSCRIÇÃO:
+{trecho or '(sem fala detectada)'}
+
+ANÁLISE DE EDIÇÃO:
+{analise}
+
+---
+
+Crie um prompt de edição completo e acionável. Estruture assim:
+
+## 🎯 Estilo Geral
+Uma frase resumindo o DNA visual do vídeo.
+
+## 🎣 Hook (0–5s)
+Como abrir: o que mostrar, o que falar, ritmo, texto na tela.
+
+## ✂️ Ritmo de Cortes
+Duração média dos cortes, padrão, quando usar jump cuts.
+
+## 🎬 Composição Visual
+Proporção entre talking head, B-roll, texto animado. Tipos de enquadramento.
+
+## 📝 Legendas e Textos
+Estilo, posição na tela, timing de entrada/saída, destaques.
+
+## 🔄 Transições
+Quais usar, quando, velocidade.
+
+## 🏗️ Estrutura Narrativa
+Gancho → desenvolvimento → CTA, com timings aproximados.
+
+## 🎵 Áudio
+Estilo de música de fundo, níveis de volume, efeitos sonoros.
+
+## 💡 Prompt Completo para IA
+Um bloco único e coeso (em 2ª pessoa, começando com "Edite o vídeo seguindo estas diretrizes:") que eu possa copiar e colar diretamente ao pedir edição ao Claude.
+""",
+        }],
+    )
+
+    _log(log, "step:4:✓ Prompt de edição gerado")
+    return response.content[0].text
+
+
 # ── Relatório final ───────────────────────────────────────────────────────────
 
 def gerar_relatorio(meta: dict, transcricao: list[dict], analise: str | None) -> str:

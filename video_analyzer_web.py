@@ -161,6 +161,9 @@ HTML = """<!DOCTYPE html>
       <button id="tab-btn-analise" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-gray-500" onclick="switchTab('analise')">
         🎬 Análise Visual
       </button>
+      <button id="tab-btn-prompt" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-gray-500" onclick="switchTab('prompt')">
+        🎯 Prompt de Edição
+      </button>
     </div>
 
     <!-- Painel Transcrição -->
@@ -185,6 +188,17 @@ HTML = """<!DOCTYPE html>
       <textarea id="analise-raw" class="hidden"></textarea>
     </div>
 
+    <!-- Painel Prompt de Edição -->
+    <div id="tab-prompt" class="hidden">
+      <div class="flex justify-end mb-2">
+        <button onclick="copiar('prompt-raw')" class="text-xs text-gray-500 hover:text-gray-300 flex items-center gap-1">
+          📋 Copiar prompt
+        </button>
+      </div>
+      <div id="prompt-content" class="prose text-sm text-gray-300 max-h-[600px] overflow-y-auto pr-1"></div>
+      <textarea id="prompt-raw" class="hidden"></textarea>
+    </div>
+
     <!-- Botões finais -->
     <div class="mt-6 pt-4 border-t border-gray-800 flex gap-3">
       <button onclick="baixarRelatorio()" class="text-xs text-gray-500 hover:text-gray-300 flex items-center gap-1">
@@ -205,11 +219,12 @@ let eventoSource = null;
 
 function switchTab(tab) {
   activeTab = tab;
-  document.getElementById('tab-transcricao').classList.toggle('hidden', tab !== 'transcricao');
-  document.getElementById('tab-analise').classList.toggle('hidden', tab !== 'analise');
+  ['transcricao', 'analise', 'prompt'].forEach(t => {
+    document.getElementById(`tab-${t}`).classList.toggle('hidden', tab !== t);
+  });
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  const idx = tab === 'transcricao' ? 0 : 1;
-  document.querySelectorAll('.tab-btn')[idx].classList.add('active');
+  const idx = ['transcricao', 'analise', 'prompt'].indexOf(tab);
+  if (idx >= 0) document.querySelectorAll('.tab-btn')[idx].classList.add('active');
 }
 
 function setStep(num, state, msg) {
@@ -328,9 +343,20 @@ function mostrarResultado(data) {
   document.getElementById('section-resultado').scrollIntoView({ behavior: 'smooth', block: 'start' });
   document.getElementById('btn-analisar').disabled = false;
 
-  // se não tem análise, esconde tab
+  // Prompt de edição
+  const promptEl = document.getElementById('prompt-content');
+  if (data.prompt_edicao) {
+    promptEl.innerHTML = marked.parse(data.prompt_edicao);
+    document.getElementById('prompt-raw').value = data.prompt_edicao;
+    document.getElementById('tab-btn-prompt').classList.remove('text-gray-500');
+  } else {
+    promptEl.innerHTML = '<p class="text-gray-600 italic">Prompt não disponível (requer análise visual).</p>';
+  }
+
+  // se não tem análise, esconde tabs visuais
   if (!data.analise) {
     document.getElementById('tab-btn-analise').style.display = 'none';
+    document.getElementById('tab-btn-prompt').style.display = 'none';
   }
 }
 
@@ -415,10 +441,12 @@ async def analyze(
                 transcricao = av.transcrever(video_path, modelo, lang, "cpu", log=log)
 
                 analise = None
+                prompt_edicao = None
                 if not so_transcricao:
                     duracao = float(meta.get("duracao") or 30)
                     frames = av.extrair_frames(video_path, duracao, tmp_dir, None, log=log)
                     analise = av.analisar_visual(frames, meta, transcricao, api_key, log=log)
+                    prompt_edicao = av.gerar_prompt_edicao(analise, meta, transcricao, api_key, log=log)
 
                 relatorio = av.gerar_relatorio(meta, transcricao, analise)
 
@@ -427,6 +455,7 @@ async def analyze(
                     "meta": meta,
                     "transcricao": transcricao,
                     "analise": analise,
+                    "prompt_edicao": prompt_edicao,
                     "relatorio": relatorio,
                 })
 
