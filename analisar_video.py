@@ -90,12 +90,27 @@ def _make_tiktok_cookies(session_id: str, output_dir: Path) -> Path:
     return cookies_path
 
 
+def _make_youtube_cookies(secure_3psid: str, output_dir: Path) -> Path:
+    """Create Netscape cookies file for YouTube/Google authentication."""
+    cookies_path = output_dir / "cookies.txt"
+    expiry = "9999999999"
+    cookies_path.write_text(
+        "# Netscape HTTP Cookie File\n"
+        f".youtube.com\tTRUE\t/\tTRUE\t{expiry}\t__Secure-3PSID\t{secure_3psid}\n"
+        f".google.com\tTRUE\t/\tTRUE\t{expiry}\t__Secure-3PSID\t{secure_3psid}\n"
+        f".youtube.com\tTRUE\t/\tTRUE\t{expiry}\t__Secure-1PSID\t{secure_3psid}\n",
+        encoding="utf-8",
+    )
+    return cookies_path
+
+
 def download_video(
     url: str,
     output_dir: Path,
     log: Callable | None = None,
     session_id: str | None = None,
     tiktok_session_id: str | None = None,
+    youtube_3psid: str | None = None,
 ) -> tuple[Path, dict]:
     import yt_dlp
 
@@ -137,9 +152,12 @@ def download_video(
         ydl_opts["cookiefile"] = str(cookies_file)
 
     if is_youtube:
-        # Try ios and tv_embedded clients to bypass bot verification without needing cookies
-        # android was patched by YouTube; ios/tv_embedded still work from VPS IPs
-        ydl_opts["extractor_args"] = {"youtube": {"player_client": ["ios", "tv_embedded"]}}
+        # Use web client (default) with cookies, or fall back to ios if no cookies
+        if youtube_3psid:
+            cookies_file = _make_youtube_cookies(youtube_3psid, output_dir)
+            ydl_opts["cookiefile"] = str(cookies_file)
+        else:
+            ydl_opts["extractor_args"] = {"youtube": {"player_client": ["ios", "tv_embedded"]}}
 
     if is_tiktok:
         # TikTok blocks data-center IPs — need cookies + realistic browser headers
