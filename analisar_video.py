@@ -65,7 +65,7 @@ def load_api_key() -> str:
 
 # ── Download ──────────────────────────────────────────────────────────────────
 
-def _make_cookies_file(session_id: str, output_dir: Path) -> Path:
+def _make_instagram_cookies(session_id: str, output_dir: Path) -> Path:
     cookies_path = output_dir / "cookies.txt"
     expiry = "9999999999"
     cookies_path.write_text(
@@ -77,7 +77,26 @@ def _make_cookies_file(session_id: str, output_dir: Path) -> Path:
     return cookies_path
 
 
-def download_video(url: str, output_dir: Path, log: Callable | None = None, session_id: str | None = None) -> tuple[Path, dict]:
+def _make_tiktok_cookies(session_id: str, output_dir: Path) -> Path:
+    """Create Netscape cookies file for TikTok authentication."""
+    cookies_path = output_dir / "cookies.txt"
+    expiry = "9999999999"
+    cookies_path.write_text(
+        "# Netscape HTTP Cookie File\n"
+        f".tiktok.com\tTRUE\t/\tTRUE\t{expiry}\tsessionid\t{session_id}\n"
+        f".tiktok.com\tTRUE\t/\tFALSE\t{expiry}\ttt_webid_v2\t0\n",
+        encoding="utf-8",
+    )
+    return cookies_path
+
+
+def download_video(
+    url: str,
+    output_dir: Path,
+    log: Callable | None = None,
+    session_id: str | None = None,
+    tiktok_session_id: str | None = None,
+) -> tuple[Path, dict]:
     import yt_dlp
 
     _log(log, "step:1:Baixando vídeo...")
@@ -114,7 +133,7 @@ def download_video(url: str, output_dir: Path, log: Callable | None = None, sess
     is_tiktok = "tiktok.com" in url
 
     if is_instagram and session_id:
-        cookies_file = _make_cookies_file(session_id, output_dir)
+        cookies_file = _make_instagram_cookies(session_id, output_dir)
         ydl_opts["cookiefile"] = str(cookies_file)
 
     if is_youtube:
@@ -123,10 +142,15 @@ def download_video(url: str, output_dir: Path, log: Callable | None = None, sess
         ydl_opts["extractor_args"] = {"youtube": {"player_client": ["ios", "tv_embedded"]}}
 
     if is_tiktok:
-        # TikTok requires a custom User-Agent header
+        # TikTok blocks data-center IPs — need cookies + realistic browser headers
         ydl_opts["http_headers"] = {
-            "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "Referer": "https://www.tiktok.com/",
+            "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
         }
+        if tiktok_session_id:
+            cookies_file = _make_tiktok_cookies(tiktok_session_id, output_dir)
+            ydl_opts["cookiefile"] = str(cookies_file)
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)

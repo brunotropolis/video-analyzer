@@ -439,7 +439,12 @@ async def analyze(
                 tmp_dir = Path(tmp)
 
                 instagram_session = os.environ.get("INSTAGRAM_SESSION_ID")
-                video_path, meta = av.download_video(url, tmp_dir, log=log, session_id=instagram_session)
+                tiktok_session = os.environ.get("TIKTOK_SESSION_ID")
+                video_path, meta = av.download_video(
+                    url, tmp_dir, log=log,
+                    session_id=instagram_session,
+                    tiktok_session_id=tiktok_session,
+                )
                 transcricao = av.transcrever(video_path, modelo, lang, "cpu", log=log)
 
                 analise = None
