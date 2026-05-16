@@ -74,7 +74,7 @@ HTML = """<!DOCTYPE html>
   <!-- Header -->
   <div class="mb-8 text-center">
     <h1 class="text-3xl font-bold mb-1" style="color:#a5b4fc">🎬 Analisador de Vídeo</h1>
-    <p class="text-gray-500 text-sm">Reels · TikTok · YouTube Shorts · YouTube</p>
+    <p class="text-gray-500 text-sm">Reels · TikTok</p>
   </div>
 
   <!-- Formulário -->
@@ -244,6 +244,12 @@ function setStep(num, state, msg) {
 function iniciarAnalise() {
   const url = document.getElementById('url-input').value.trim();
   if (!url) { alert('Cole uma URL de vídeo antes de continuar.'); return; }
+
+  // YouTube é bloqueado por IPs de servidor (requer Proof of Origin Token do browser)
+  if (url.includes('youtube.com') || url.includes('youtu.be')) {
+    alert('YouTube não é suportado nesta versão.\\n\\nO YouTube bloqueia downloads de IPs de servidor. Use links do Instagram (Reels) ou TikTok.');
+    return;
+  }
 
   const modelo = document.getElementById('opt-modelo').value;
   const lang = document.getElementById('opt-lang').value;
