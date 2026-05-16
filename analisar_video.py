@@ -110,9 +110,22 @@ def download_video(url: str, output_dir: Path, log: Callable | None = None, sess
     }
 
     is_instagram = "instagram.com" in url
+    is_youtube = "youtube.com" in url or "youtu.be" in url
+    is_tiktok = "tiktok.com" in url
+
     if is_instagram and session_id:
         cookies_file = _make_cookies_file(session_id, output_dir)
         ydl_opts["cookiefile"] = str(cookies_file)
+
+    if is_youtube:
+        # Use Android client to bypass bot verification without needing cookies
+        ydl_opts["extractor_args"] = {"youtube": {"player_client": ["android"]}}
+
+    if is_tiktok:
+        # TikTok requires a custom User-Agent header
+        ydl_opts["http_headers"] = {
+            "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
+        }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
