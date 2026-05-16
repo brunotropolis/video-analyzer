@@ -118,8 +118,9 @@ def download_video(url: str, output_dir: Path, log: Callable | None = None, sess
         ydl_opts["cookiefile"] = str(cookies_file)
 
     if is_youtube:
-        # Use Android client to bypass bot verification without needing cookies
-        ydl_opts["extractor_args"] = {"youtube": {"player_client": ["android"]}}
+        # Try ios and tv_embedded clients to bypass bot verification without needing cookies
+        # android was patched by YouTube; ios/tv_embedded still work from VPS IPs
+        ydl_opts["extractor_args"] = {"youtube": {"player_client": ["ios", "tv_embedded"]}}
 
     if is_tiktok:
         # TikTok requires a custom User-Agent header
